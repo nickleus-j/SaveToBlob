@@ -1,0 +1,18 @@
+composeversion: '3.8'
+
+services:
+  azurite:
+    image: ://microsoft.com
+    container_name: azurite_storage
+    ports:
+      - "10000:10000" # Blob Service
+      - "10001:10001" # Queue Service
+      - "10002:10002" # Table Service
+    volumes:
+      - azurite_data:/data
+    # Bind to 0.0.0.0 and enable loose mode for flexible header testing
+    command: azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --location /data --loose
+
+volumes:
+  azurite_data:
+    driver: local

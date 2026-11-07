@@ -1,0 +1,96 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:SaveToBlob.ViewModels"
+             Title="Zip → Blob Upload"
+             x:Class="SaveToBlob.MainPage">
+<ContentPage.Resources>
+        <ResourceDictionary Source="Resources/Styles/GlobalConverters.xaml" />
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,*,Auto"
+          Padding="16"
+          RowSpacing="12">
+
+        <!-- ===== Blob storage settings ===== -->
+        <Border Grid.Row="0" Stroke="#DDD" StrokeShape="RoundRectangle 8" Padding="12">
+            <VerticalStackLayout Spacing="8">
+                <Label Text="Blob storage endpoint"
+                       FontAttributes="Bold" />
+
+                <HorizontalStackLayout Spacing="8">
+                    <CheckBox IsChecked="{Binding UseAzurite}" />
+                    <Label Text="Use Azurite (local emulator, devstoreaccount1)"
+                           VerticalOptions="Center" />
+                </HorizontalStackLayout>
+
+                <Label Text="Connection string"
+                       FontSize="12" Opacity="0.7" />
+                <Editor Text="{Binding ConnectionString}"
+                        Placeholder="DefaultEndpointsProtocol=https;AccountName=…;AccountKey=…;EndpointSuffix=core.windows.net"
+                        AutoSize="TextChanges"
+                        MinimumHeightRequest="60"
+                        IsEnabled="{Binding UseAzurite, Converter={StaticResource InverseBoolConverter}}" />
+
+                <Label Text="Container name"
+                       FontSize="12" Opacity="0.7" />
+                <Entry Text="{Binding ContainerName}"
+                       Placeholder="uploads" />
+            </VerticalStackLayout>
+        </Border>
+
+        <!-- ===== Selected files collection ===== -->
+        <CollectionView Grid.Row="1"
+                        ItemsSource="{Binding Files}"
+                        SelectionMode="None">
+            <CollectionView.EmptyView>
+                <VerticalStackLayout Padding="24" HorizontalOptions="Center">
+                    <Label Text="No files selected"
+                           HorizontalOptions="Center" Opacity="0.6" />
+                </VerticalStackLayout>
+            </CollectionView.EmptyView>
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="viewModels:PickedFile">
+                    <Border Stroke="#EEE" StrokeShape="RoundRectangle 6"
+                            Margin="0,4" Padding="12,8">
+                        <Grid ColumnDefinitions="*,Auto,Auto">
+                            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                <Label Text="{Binding FileName}"
+                                       LineBreakMode="MiddleTruncation"
+                                       FontAttributes="Bold" />
+                                <Label Text="{Binding SizeDisplay}"
+                                       FontSize="12" Opacity="0.6" />
+                            </VerticalStackLayout>
+                            <Button Grid.Column="1" Text="Remove"
+                                    Command="{Binding BindingContext.RemoveFileCommand, Source={RelativeSource AncestorType={x:Type CollectionView}}}"
+                                    CommandParameter="{Binding .}"
+                                    BackgroundColor="Transparent"
+                                    TextColor="Crimson" />
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- ===== Actions ===== -->
+        <VerticalStackLayout Grid.Row="2" Spacing="8">
+            <Label Text="{Binding StatusMessage}"
+                   LineBreakMode="WordWrap" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}" />
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                <Button Grid.Column="0" Text="Pick files"
+                        Command="{Binding PickFilesCommand}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}" />
+                <Button Grid.Column="1" Text="Clear"
+                        Command="{Binding ClearFilesCommand}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}" />
+                <Button Grid.Column="2" Text="Zip &amp; Upload"
+                        Command="{Binding CompressAndUploadCommand}"
+                        BackgroundColor="#6d4aff"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}" />
+            </Grid>
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>
