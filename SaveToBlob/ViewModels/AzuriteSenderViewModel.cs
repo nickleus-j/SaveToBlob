@@ -5,54 +5,55 @@ using SaveToBlob.Services;
 using Microsoft.Maui.Storage;
 namespace SaveToBlob.ViewModels;
 
-public partial class PickedFile : ObservableObject
-{
-    public string FileName { get; init; } = string.Empty;
-    public long SizeBytes { get; init; }
-
-    public string SizeDisplay =>
-        SizeBytes switch
-        {
-            >= 1_048_576 => $"{SizeBytes / 1048576.0:F1} MB",
-            >= 1024      => $"{SizeBytes / 1024.0:F1} KB",
-            _            => $"{SizeBytes} B"
-        };
-
-    [ObservableProperty]
-    private string? _thumbnail;
-}
-
-public partial class MainViewModel : ObservableObject
+public partial class AzuriteSenderViewModel : ObservableObject
 {
     private readonly IZipService _zipService;
     private readonly IBlobUploadService _uploadService;
     private readonly IBlobStorageSettingsService _settingsService;
 
-    public MainViewModel(
-        IZipService zipService,
-        IBlobUploadService uploadService,
-        IBlobStorageSettingsService settingsService)
+    public AzuriteSenderViewModel(IZipService zipService, IBlobUploadService uploadService, IBlobStorageSettingsService settingsService)
     {
         _zipService = zipService;
         _uploadService = uploadService;
         _settingsService = settingsService;
 
-        var s = settingsService.Load();
-        _connectionString = s.ConnectionString;
-        _containerName = s.ContainerName;
-        _useAzurite = s.UseAzurite;
+        var storageSettings = settingsService.Load();
+        _connectionString = storageSettings.ConnectionString;
+        _containerName = storageSettings.ContainerName;
+        _useAzurite = storageSettings.UseAzurite;
+        _useCustomConnection = !storageSettings.UseAzurite;
     }
 
     public ObservableCollection<PickedFile> Files { get; } = new();
 
-    [ObservableProperty] private string _connectionString;
-    [ObservableProperty] private string _containerName;
+    // ---- Storage mode (mutually exclusive radio buttons) -------------------
+
     [ObservableProperty] private bool _useAzurite;
+    [ObservableProperty] private bool _useCustomConnection;
+    [ObservableProperty] private string _connectionString = string.Empty;
+    [ObservableProperty] private string _containerName,zipNamePrefix;
+
+    // Keep the two options exclusive and mirror UseAzurite into the persisted
+    // settings model (UseCustomConnection is just its inverse).
+    partial void OnUseAzuriteChanged(bool value)
+    {
+        if (value && UseCustomConnection)
+            _useCustomConnection = false;
+        OnPropertyChanged(nameof(UseCustomConnection));
+    }
+
+    partial void OnUseCustomConnectionChanged(bool value)
+    {
+        if (value && UseAzurite)
+            _useAzurite = false;
+        OnPropertyChanged(nameof(UseAzurite));
+    }
+
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string _statusMessage = "Pick files, then compress & upload.";
 
-    // The FileResult handles survive only for the session — we keep the open
-    // delegates so streams can be re-read later in the pipeline.
+    // The FileResult handles survive only for the session — we keep them so
+    // streams can be re-read later in the pipeline.
     private readonly List<FileResult> _pickedResults = new();
 
     [RelayCommand]
@@ -60,7 +61,7 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
-            var results =  await FilePicker.PickMultipleAsync(new PickOptions
+            var results = await FilePicker.PickMultipleAsync(new PickOptions
             {
                 PickerTitle = "Select files to zip and upload"
                 // Omit FileTypes to allow all files; add e.g.
@@ -69,13 +70,13 @@ public partial class MainViewModel : ObservableObject
 
             if (results is null || results.Count() == 0) return;
 
-            foreach (var r in results)
+            foreach (FileResult fr in results)
             {
-                _pickedResults.Add(r!);
+                _pickedResults.Add(fr);
                 Files.Add(new PickedFile
                 {
-                    FileName = r.FileName,
-                    SizeBytes = await GetLengthAsync(r)
+                    FileName = fr.FileName,
+                    SizeBytes = await GetLengthAsync(fr)
                 });
             }
 
@@ -115,6 +116,13 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
+        // Validate the chosen storage mode up-front for a clear error.
+        if (!UseAzurite && string.IsNullOrWhiteSpace(ConnectionString))
+        {
+            StatusMessage = "✗ Enter a connection string or choose the Azurite option.";
+            return;
+        }
+
         IsBusy = true;
         try
         {
@@ -133,8 +141,7 @@ public partial class MainViewModel : ObservableObject
             var container = await _uploadService.GetContainerClientAsync(settings, token);
 
             using var zipStream = new MemoryStream(zipData);
-            await _uploadService.UploadAsync(container, zipName, zipStream,
-                contentType: "application/zip", ct: token);
+            await _uploadService.UploadAsync(container, zipName, zipStream, contentType: "application/zip", ct: token);
 
             StatusMessage = $"✓ Uploaded '{zipName}' to container '{ContainerName}'.";
             ClearFiles();
@@ -166,4 +173,3 @@ public partial class MainViewModel : ObservableObject
         }
     }
 }
-

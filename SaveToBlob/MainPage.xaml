@@ -8,9 +8,7 @@
         <ResourceDictionary Source="Resources/Styles/GlobalConverters.xaml" />
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="Auto,*,Auto"
-          Padding="16"
-          RowSpacing="12">
+    <Grid RowDefinitions="Auto,*,Auto" Padding="16"  RowSpacing="12">
 
         <!-- ===== Blob storage settings ===== -->
         <Border Grid.Row="0" Stroke="#DDD" StrokeShape="RoundRectangle 8" Padding="12">
@@ -18,35 +16,36 @@
                 <Label Text="Blob storage endpoint"
                        FontAttributes="Bold" />
 
-                <HorizontalStackLayout Spacing="8">
-                    <CheckBox IsChecked="{Binding UseAzurite}" />
-                    <Label Text="Use Azurite (local emulator, devstoreaccount1)"
-                           VerticalOptions="Center" />
-                </HorizontalStackLayout>
+                <!-- Mutually exclusive choice: emulator OR custom account -->
+                <RadioButton GroupName="StorageMode" Content="Use Azurite (local emulator)" IsChecked="{Binding UseAzurite}" />
+                <RadioButton GroupName="StorageMode"
+                             Content="Use a connection string"
+                             IsChecked="{Binding UseCustomConnection}" />
 
-                <Label Text="Connection string"
-                       FontSize="12" Opacity="0.7" />
-                <Editor Text="{Binding ConnectionString}"
-                        Placeholder="DefaultEndpointsProtocol=https;AccountName=…;AccountKey=…;EndpointSuffix=core.windows.net"
-                        AutoSize="TextChanges"
-                        MinimumHeightRequest="60"
-                        IsEnabled="{Binding UseAzurite, Converter={StaticResource InverseBoolConverter}}" />
+                <!-- Connection-string editor: only shown for the custom option -->
+                <VerticalStackLayout IsVisible="{Binding UseCustomConnection}"
+                                     Spacing="4">
+                    <Label Text="Connection string"
+                           FontSize="12" Opacity="0.7" />
+                    <Editor Text="{Binding ConnectionString}"
+                            Placeholder="DefaultEndpointsProtocol=https;AccountName=…;AccountKey=…;EndpointSuffix=core.windows.net"
+                            AutoSize="TextChanges"
+                            MinimumHeightRequest="60" />
+                    <Label Text="Real accounts: https; Azurite on a LAN/host: http://127.0.0.1:10000/devstoreaccount1"
+                           FontSize="11" Opacity="0.5"
+                           LineBreakMode="WordWrap" />
+                </VerticalStackLayout>
 
-                <Label Text="Container name"
-                       FontSize="12" Opacity="0.7" />
-                <Entry Text="{Binding ContainerName}"
-                       Placeholder="uploads" />
+                <Label Text="Container name"  FontSize="12" Opacity="0.7" />
+                <Entry Text="{Binding ContainerName}" Placeholder="uploads" />
             </VerticalStackLayout>
         </Border>
 
         <!-- ===== Selected files collection ===== -->
-        <CollectionView Grid.Row="1"
-                        ItemsSource="{Binding Files}"
-                        SelectionMode="None">
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Files}" SelectionMode="None">
             <CollectionView.EmptyView>
                 <VerticalStackLayout Padding="24" HorizontalOptions="Center">
-                    <Label Text="No files selected"
-                           HorizontalOptions="Center" Opacity="0.6" />
+                    <Label Text="No files selected" HorizontalOptions="Center" Opacity="0.6" />
                 </VerticalStackLayout>
             </CollectionView.EmptyView>
 
@@ -54,7 +53,7 @@
                 <DataTemplate x:DataType="viewModels:PickedFile">
                     <Border Stroke="#EEE" StrokeShape="RoundRectangle 6"
                             Margin="0,4" Padding="12,8">
-                        <Grid ColumnDefinitions="*,Auto,Auto">
+                        <Grid ColumnDefinitions="*,Auto">
                             <VerticalStackLayout Grid.Column="0" Spacing="2">
                                 <Label Text="{Binding FileName}"
                                        LineBreakMode="MiddleTruncation"

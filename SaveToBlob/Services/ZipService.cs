@@ -2,7 +2,7 @@ namespace SaveToBlob.Services;
 public interface IZipService
 {
     /// <summary>Picks a safe archive name derived from the current timestamp.</summary>
-    string BuildArchiveName();
+    string BuildArchiveName(string prefix="upload");
 
     /// <summary>Creates a zip archive containing all provided files.</summary>
     Task<(byte[] ZipData, IReadOnlyList<string> EntryNames)> CreateZipAsync(
@@ -12,9 +12,7 @@ public interface IZipService
 
 public class ZipService : IZipService
 {
-    public string BuildArchiveName() =>
-        $"upload_{DateTime.Now:yyyyMMdd_HHmmss}.zip";
-
+    public string BuildArchiveName(string prefix="upload") =>$"{prefix}_{DateTime.Now:yyyyMMdd_HHmmss}.zip";
     public async Task<(byte[] ZipData, IReadOnlyList<string> EntryNames)> CreateZipAsync(
         IEnumerable<(string FileName, Func<Task<Stream>> OpenStream)> files,
         CancellationToken cancellationToken = default)

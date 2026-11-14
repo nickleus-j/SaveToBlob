@@ -19,7 +19,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<Services.IBlobStorageSettingsService, Services.BlobStorageSettingsService>();
         builder.Services.AddSingleton<Services.IZipService, Services.ZipService>();
         builder.Services.AddSingleton<Services.IBlobUploadService, Services.BlobUploadService>();
-        builder.Services.AddTransient<ViewModels.MainViewModel>();
+        builder.Services.AddTransient<ViewModels.AzuriteSenderViewModel>();
 
         return builder.Build();
     }
